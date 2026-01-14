@@ -12,6 +12,7 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     minify: 'esbuild',
-    sourcemap: false
+    sourcemap: false,
+    terserOptions: false
   }
 });
