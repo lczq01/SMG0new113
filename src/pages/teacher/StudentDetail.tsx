@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, Card, Typography, Descriptions, Table, Tag, message, Tabs, Space, Divider, Input, Modal, Form, Select } from 'antd';
 import { LeftOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { studentApi, rankingApi, standardApi, violationApi } from '../../services/api';
+import { studentManagementApi, rankingApi, standardApi, violationApi } from '../../services/api';
 import { Student, ExamRanking, Standard, Violation } from '../../types';
 
 const { Title, Paragraph } = Typography;
@@ -31,7 +31,7 @@ const StudentDetail: React.FC = () => {
         setLoading(true);
         
         // 获取学生基本信息
-        const studentResponse = await studentApi.getById(id);
+        const studentResponse = await studentManagementApi.getById(id);
         if (studentResponse.success) {
           setStudent(studentResponse.data);
         } else {

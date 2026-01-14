@@ -1,67 +1,13 @@
 import { Student, ExamRanking, Standard, Violation, CompleteData, ApiResponse, TeacherLogin, StudentLogin } from '../types';
-import { mockStudents, mockRankings, mockStandards, mockViolations } from './mockData';
 
 // API基础配置
 const API_BASE_URL = 'http://localhost:3000/api';
 
-// 是否使用静态数据模式（用于部署时）
-const USE_STATIC_DATA = true;
+// 静态数据文件路径 - 学生端从这个文件获取所有数据
+const STATIC_DATA_PATH = '/data.json';
 
-// 从本地JSON文件加载数据
-let staticDataCache: CompleteData | null = null;
-
-async function loadStaticData(): Promise<CompleteData> {
-  if (staticDataCache) {
-    return staticDataCache;
-  }
-  
-  try {
-    // 尝试从本地data.json文件加载数据
-    const response = await fetch('/data.json');
-    if (response.ok) {
-      const rawData = await response.json();
-      
-      // 转换数据类型，确保与接口定义匹配
-      staticDataCache = {
-        students: rawData.students.map((student: any) => ({
-          ...student,
-          id: String(student.id), // 确保id是字符串类型
-          studentId: String(student.studentId) // 确保studentId是字符串类型
-        })),
-        rankings: rawData.rankings.map((ranking: any) => ({
-          ...ranking,
-          id: String(ranking.id), // 确保id是字符串类型
-          studentId: String(ranking.studentId) // 确保studentId是字符串类型
-        })),
-        standards: rawData.standards.map((standard: any) => ({
-          ...standard,
-          id: String(standard.id), // 确保id是字符串类型
-          studentId: String(standard.studentId) // 确保studentId是字符串类型
-        })),
-        violations: rawData.violations.map((violation: any) => ({
-          ...violation,
-          id: String(violation.id), // 确保id是字符串类型
-          studentId: String(violation.studentId) // 确保studentId是字符串类型
-        }))
-      };
-      
-      return staticDataCache;
-    }
-    console.log('本地data.json文件不存在，使用mock数据');
-  } catch (error) {
-    console.log('加载本地data.json文件失败，使用mock数据:', error);
-  }
-  
-  // 如果加载失败，使用mock数据
-  staticDataCache = {
-    students: mockStudents,
-    rankings: mockRankings,
-    standards: mockStandards,
-    violations: mockViolations
-  };
-  
-  return staticDataCache as CompleteData;
-}
+// 缓存完整数据，避免重复加载
+let cachedData: CompleteData | null = null;
 
 // 获取存储的token
 const getToken = (): string | null => {
@@ -124,59 +70,58 @@ async function request<T>(
   }
 }
 
+// 加载完整数据
+async function loadCompleteData(): Promise<CompleteData> {
+  if (cachedData) {
+    return cachedData;
+  }
+  
+  try {
+    const response = await fetch(STATIC_DATA_PATH);
+    if (!response.ok) {
+      throw new Error('无法加载数据文件');
+    }
+    
+    const data = await response.json();
+    cachedData = data;
+    return data;
+  } catch (error) {
+    console.error('加载数据失败:', error);
+    throw error;
+  }
+}
+
 // 学生相关API
 export const studentApi = {
-  // 学生登录
+  // 学生登录 - 从JSON文件中匹配班级、姓名、学号
   login: async (loginData: StudentLogin): Promise<ApiResponse<Student | null>> => {
-    if (USE_STATIC_DATA) {
-      // 使用静态数据登录
-      const data = await loadStaticData();
+    try {
+      const data = await loadCompleteData();
+      
+      // 在JSON数据中查找匹配的学生
       const student = data.students.find(
-        s => s.class === loginData.class && s.name === loginData.name && s.studentId === loginData.studentId
+        s => s.class === loginData.class && 
+             s.name === loginData.name && 
+             s.studentId === loginData.studentId
       );
       
       if (student) {
         return {
           success: true,
           message: '登录成功',
-          data: student
+          data: student,
         };
       } else {
         return {
           success: false,
-          message: '班级、姓名或学号不匹配',
-          data: null
-        };
-      }
-    }
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/student/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(loginData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        return {
-          success: false,
-          message: errorData.message || '登录失败',
+          message: '班级、姓名或学号不正确',
           data: null,
         };
       }
-
-      const data = await response.json();
-      if (data.success && data.token) {
-        setToken(data.token);
-      }
-      return data;
     } catch (error: any) {
       return {
         success: false,
-        message: error.message || '网络请求失败',
+        message: '加载数据失败',
         data: null,
       };
     }
@@ -184,16 +129,22 @@ export const studentApi = {
 
   // 根据ID获取学生信息
   getById: async (id: string): Promise<ApiResponse<Student | null>> => {
-    if (USE_STATIC_DATA) {
-      const data = await loadStaticData();
+    try {
+      const data = await loadCompleteData();
       const student = data.students.find(s => s.id === id);
+      
       return {
         success: true,
-        message: '获取学生信息成功',
-        data: student || null
+        message: '获取成功',
+        data: student || null,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: '加载数据失败',
+        data: null,
       };
     }
-    return request<Student | null>(`/student/${id}`);
   }
 };
 
@@ -238,43 +189,21 @@ export const teacherApi = {
 export const rankingApi = {
   // 获取所有排名
   getAll: async (): Promise<ApiResponse<ExamRanking[]>> => {
-    if (USE_STATIC_DATA) {
-      const data = await loadStaticData();
-      return {
-        success: true,
-        message: '获取排名成功',
-        data: data.rankings
-      };
-    }
     return request<ExamRanking[]>('/ranking');
   },
 
   // 根据学生ID获取排名
   getByStudentId: async (studentId: string): Promise<ApiResponse<ExamRanking[]>> => {
-    if (USE_STATIC_DATA) {
-      const data = await loadStaticData();
-      return {
-        success: true,
-        message: '获取排名成功',
-        data: data.rankings.filter(r => r.studentId === studentId)
-      };
-    }
     return request<ExamRanking[]>(`/ranking/student/${studentId}`);
   },
 
-  // 批量导入排名
+  // 批量导入排名 - 学生端不需要此功能
   batchCreate: async (rankings: any[]): Promise<ApiResponse<any>> => {
-    if (USE_STATIC_DATA) {
-      return {
-        success: true,
-        message: '静态模式下不支持批量导入',
-        data: null
-      };
-    }
-    return request<any>('/ranking/batch', {
-      method: 'POST',
-      body: JSON.stringify(rankings),
-    });
+    return {
+      success: false,
+      message: '学生端不支持此功能',
+      data: null,
+    };
   }
 };
 
@@ -282,72 +211,39 @@ export const rankingApi = {
 export const standardApi = {
   // 获取所有标准
   getAll: async (): Promise<ApiResponse<Standard[]>> => {
-    if (USE_STATIC_DATA) {
-      const data = await loadStaticData();
-      return {
-        success: true,
-        message: '获取标准成功',
-        data: data.standards
-      };
-    }
     return request<Standard[]>('/standard');
   },
 
   // 根据学生ID获取标准
   getByStudentId: async (studentId: string): Promise<ApiResponse<Standard[]>> => {
-    if (USE_STATIC_DATA) {
-      const data = await loadStaticData();
-      return {
-        success: true,
-        message: '获取标准成功',
-        data: data.standards.filter(s => s.studentId === studentId)
-      };
-    }
     return request<Standard[]>(`/standard/student/${studentId}`);
   },
 
-  // 创建标准
+  // 创建标准 - 学生端不需要此功能
   create: async (standardData: { studentId: string; name: string; value: number }): Promise<ApiResponse<Standard>> => {
-    if (USE_STATIC_DATA) {
-      return {
-        success: false,
-        message: '静态模式下不支持创建标准',
-        data: null as any
-      };
-    }
-    return request<Standard>('/standard', {
-      method: 'POST',
-      body: JSON.stringify(standardData),
-    });
+    return {
+      success: false,
+      message: '学生端不支持此功能',
+      data: null,
+    };
   },
 
-  // 更新标准
+  // 更新标准 - 学生端不需要此功能
   update: async (id: string, updateData: { name?: string; value?: number }): Promise<ApiResponse<Standard>> => {
-    if (USE_STATIC_DATA) {
-      return {
-        success: false,
-        message: '静态模式下不支持更新标准',
-        data: null as any
-      };
-    }
-    return request<Standard>(`/standard/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updateData),
-    });
+    return {
+      success: false,
+      message: '学生端不支持此功能',
+      data: null,
+    };
   },
 
-  // 删除标准
+  // 删除标准 - 学生端不需要此功能
   delete: async (id: string): Promise<ApiResponse<boolean>> => {
-    if (USE_STATIC_DATA) {
-      return {
-        success: false,
-        message: '静态模式下不支持删除标准',
-        data: false
-      };
-    }
-    return request<boolean>(`/standard/${id}`, {
-      method: 'DELETE',
-    });
+    return {
+      success: false,
+      message: '学生端不支持此功能',
+      data: false,
+    };
   }
 };
 
@@ -355,57 +251,30 @@ export const standardApi = {
 export const violationApi = {
   // 获取所有违规记录
   getAll: async (): Promise<ApiResponse<Violation[]>> => {
-    if (USE_STATIC_DATA) {
-      const data = await loadStaticData();
-      return {
-        success: true,
-        message: '获取违规记录成功',
-        data: data.violations
-      };
-    }
     return request<Violation[]>('/violation');
   },
 
   // 根据学生ID获取违规记录
   getByStudentId: async (studentId: string): Promise<ApiResponse<Violation[]>> => {
-    if (USE_STATIC_DATA) {
-      const data = await loadStaticData();
-      return {
-        success: true,
-        message: '获取违规记录成功',
-        data: data.violations.filter(v => v.studentId === studentId)
-      };
-    }
     return request<Violation[]>(`/violation/student/${studentId}`);
   },
 
-  // 创建违规记录
+  // 创建违规记录 - 学生端不需要此功能
   create: async (violationData: { studentId: string; type: string; violationDate: string }): Promise<ApiResponse<Violation>> => {
-    if (USE_STATIC_DATA) {
-      return {
-        success: false,
-        message: '静态模式下不支持创建违规记录',
-        data: null as any
-      };
-    }
-    return request<Violation>('/violation', {
-      method: 'POST',
-      body: JSON.stringify(violationData),
-    });
+    return {
+      success: false,
+      message: '学生端不支持此功能',
+      data: null,
+    };
   },
 
-  // 删除违规记录
+  // 删除违规记录 - 学生端不需要此功能
   delete: async (id: string): Promise<ApiResponse<boolean>> => {
-    if (USE_STATIC_DATA) {
-      return {
-        success: false,
-        message: '静态模式下不支持删除违规记录',
-        data: false
-      };
-    }
-    return request<boolean>(`/violation/${id}`, {
-      method: 'DELETE',
-    });
+    return {
+      success: false,
+      message: '学生端不支持此功能',
+      data: false,
+    };
   }
 };
 
@@ -432,6 +301,11 @@ export const studentManagementApi = {
     }
     // 保持向后兼容
     return response;
+  },
+  
+  // 根据ID获取学生信息
+  getById: async (id: string): Promise<ApiResponse<Student>> => {
+    return request<Student>(`/student/${id}`);
   },
   
   // 创建单个学生
