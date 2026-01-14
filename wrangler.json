@@ -1,10 +1,7 @@
 {
   "name": "smg-student-portal",
   "compatibility_date": "2026-01-14",
-  "pages": {
-    "build_output_dir": "dist",
-    "dev": {
-      "port": 8788
-    }
+  "assets": {
+    "directory": "./dist"
   }
 }
