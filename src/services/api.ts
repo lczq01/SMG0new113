@@ -381,7 +381,7 @@ export const studentRankingApi = {
       return {
         success: true,
         message: '获取成功',
-        data: data.examRankings,
+        data: data.rankings,
       };
     } catch (error: any) {
       return {
@@ -397,7 +397,7 @@ export const studentRankingApi = {
     try {
       const data = await loadCompleteData();
       const numericStudentId = parseInt(studentId, 10);
-      const rankings = data.examRankings.filter(r => r.studentId === numericStudentId);
+      const rankings = data.rankings.filter(r => r.studentId === numericStudentId);
       return {
         success: true,
         message: '获取成功',
