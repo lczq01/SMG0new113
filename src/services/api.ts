@@ -197,13 +197,12 @@ export const rankingApi = {
     return request<ExamRanking[]>(`/ranking/student/${studentId}`);
   },
 
-  // 批量导入排名 - 学生端不需要此功能
+  // 批量导入排名
   batchCreate: async (rankings: any[]): Promise<ApiResponse<any>> => {
-    return {
-      success: false,
-      message: '学生端不支持此功能',
-      data: null,
-    };
+    return request<any>('/ranking/batch', {
+      method: 'POST',
+      body: JSON.stringify(rankings),
+    });
   }
 };
 
@@ -219,31 +218,27 @@ export const standardApi = {
     return request<Standard[]>(`/standard/student/${studentId}`);
   },
 
-  // 创建标准 - 学生端不需要此功能
+  // 创建标准
   create: async (standardData: { studentId: string; name: string; value: number }): Promise<ApiResponse<Standard>> => {
-    return {
-      success: false,
-      message: '学生端不支持此功能',
-      data: null,
-    };
+    return request<Standard>('/standard', {
+      method: 'POST',
+      body: JSON.stringify(standardData),
+    });
   },
 
-  // 更新标准 - 学生端不需要此功能
+  // 更新标准
   update: async (id: string, updateData: { name?: string; value?: number }): Promise<ApiResponse<Standard>> => {
-    return {
-      success: false,
-      message: '学生端不支持此功能',
-      data: null,
-    };
+    return request<Standard>(`/standard/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
   },
 
-  // 删除标准 - 学生端不需要此功能
+  // 删除标准
   delete: async (id: string): Promise<ApiResponse<boolean>> => {
-    return {
-      success: false,
-      message: '学生端不支持此功能',
-      data: false,
-    };
+    return request<boolean>(`/standard/${id}`, {
+      method: 'DELETE',
+    });
   }
 };
 
@@ -259,22 +254,19 @@ export const violationApi = {
     return request<Violation[]>(`/violation/student/${studentId}`);
   },
 
-  // 创建违规记录 - 学生端不需要此功能
+  // 创建违规记录
   create: async (violationData: { studentId: string; type: string; violationDate: string }): Promise<ApiResponse<Violation>> => {
-    return {
-      success: false,
-      message: '学生端不支持此功能',
-      data: null,
-    };
+    return request<Violation>('/violation', {
+      method: 'POST',
+      body: JSON.stringify(violationData),
+    });
   },
 
-  // 删除违规记录 - 学生端不需要此功能
+  // 删除违规记录
   delete: async (id: string): Promise<ApiResponse<boolean>> => {
-    return {
-      success: false,
-      message: '学生端不支持此功能',
-      data: false,
-    };
+    return request<boolean>(`/violation/${id}`, {
+      method: 'DELETE',
+    });
   }
 };
 
@@ -376,5 +368,129 @@ export const alertApi = {
   // 获取所有预警
   getAll: async (): Promise<ApiResponse<any[]>> => {
     return request<any[]>('/alert');
+  }
+};
+
+// 学生端专用API
+// 学生端排名API
+export const studentRankingApi = {
+  // 获取所有排名
+  getAll: async (): Promise<ApiResponse<ExamRanking[]>> => {
+    try {
+      const data = await loadCompleteData();
+      return {
+        success: true,
+        message: '获取成功',
+        data: data.examRankings,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || '加载数据失败',
+        data: [],
+      };
+    }
+  },
+
+  // 根据学生ID获取排名
+  getByStudentId: async (studentId: string): Promise<ApiResponse<ExamRanking[]>> => {
+    try {
+      const data = await loadCompleteData();
+      const numericStudentId = parseInt(studentId, 10);
+      const rankings = data.examRankings.filter(r => r.studentId === numericStudentId);
+      return {
+        success: true,
+        message: '获取成功',
+        data: rankings,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || '加载数据失败',
+        data: [],
+      };
+    }
+  }
+};
+
+// 学生端标准API
+export const studentStandardApi = {
+  // 获取所有标准
+  getAll: async (): Promise<ApiResponse<Standard[]>> => {
+    try {
+      const data = await loadCompleteData();
+      return {
+        success: true,
+        message: '获取成功',
+        data: data.standards,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || '加载数据失败',
+        data: [],
+      };
+    }
+  },
+
+  // 根据学生ID获取标准
+  getByStudentId: async (studentId: string): Promise<ApiResponse<Standard[]>> => {
+    try {
+      const data = await loadCompleteData();
+      const numericStudentId = parseInt(studentId, 10);
+      const standards = data.standards.filter(s => s.studentId === numericStudentId);
+      return {
+        success: true,
+        message: '获取成功',
+        data: standards,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || '加载数据失败',
+        data: [],
+      };
+    }
+  }
+};
+
+// 学生端违规记录API
+export const studentViolationApi = {
+  // 获取所有违规记录
+  getAll: async (): Promise<ApiResponse<Violation[]>> => {
+    try {
+      const data = await loadCompleteData();
+      return {
+        success: true,
+        message: '获取成功',
+        data: data.violations,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || '加载数据失败',
+        data: [],
+      };
+    }
+  },
+
+  // 根据学生ID获取违规记录
+  getByStudentId: async (studentId: string): Promise<ApiResponse<Violation[]>> => {
+    try {
+      const data = await loadCompleteData();
+      const numericStudentId = parseInt(studentId, 10);
+      const violations = data.violations.filter(v => v.studentId === numericStudentId);
+      return {
+        success: true,
+        message: '获取成功',
+        data: violations,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || '加载数据失败',
+        data: [],
+      };
+    }
   }
 };

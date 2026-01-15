@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, message, Button, Tag, Typography, Row, Col, Menu } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { rankingApi } from '../services/api';
+import { studentRankingApi } from '../services/api';
 import { ExamRanking } from '../types';
 
 const { Title, Text } = Typography;
@@ -31,7 +31,7 @@ const StudentRanking: React.FC = () => {
         }
 
         // 获取学生排名记录
-        const response = await rankingApi.getByStudentId(studentId);
+        const response = await studentRankingApi.getByStudentId(studentId);
         if (response.success) {
           // 按创建时间倒序排列（最新考试在前）
           const sortedRankings = response.data.sort((a, b) => 

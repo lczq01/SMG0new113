@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, message, Button, Tag, Menu } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { violationApi } from '../services/api';
+import { studentViolationApi } from '../services/api';
 import { Violation } from '../types';
 
 const StudentViolation: React.FC = () => {
@@ -21,7 +21,7 @@ const StudentViolation: React.FC = () => {
         }
 
         // 获取学生违规记录
-        const response = await violationApi.getByStudentId(studentId);
+        const response = await studentViolationApi.getByStudentId(studentId);
         if (response.success) {
           // 按时间倒序排列
           const sortedViolations = response.data.sort((a, b) => {

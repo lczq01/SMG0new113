@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, message, Button, Menu } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { studentApi, standardApi } from '../services/api';
+import { studentApi, studentStandardApi } from '../services/api';
 import { Student, Standard } from '../types';
 
 const StudentProfile: React.FC = () => {
@@ -28,7 +28,7 @@ const StudentProfile: React.FC = () => {
         }
 
         // 获取学生标准
-        const standardsResponse = await standardApi.getByStudentId(studentId);
+        const standardsResponse = await studentStandardApi.getByStudentId(studentId);
         if (standardsResponse.success) {
           setStandards(standardsResponse.data);
         }
